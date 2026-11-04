@@ -254,3 +254,4 @@ export const SecurityEventsView: React.FC = () => {
     </div>
   );
 };
+

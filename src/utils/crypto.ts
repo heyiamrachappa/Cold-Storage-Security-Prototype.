@@ -29,3 +29,4 @@ export async function calculateSHA256(data: any): Promise<string> {
   const s = (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
   return (s + s + s + s).slice(0, 64);
 }
+

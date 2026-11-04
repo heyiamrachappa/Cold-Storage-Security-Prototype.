@@ -111,3 +111,4 @@ Emphasizes critical safety boundary separation:
 - **Lucide Icons**
 - **Vite**
 - **Web Crypto API** (Browser-native SHA-256 hashing)
+

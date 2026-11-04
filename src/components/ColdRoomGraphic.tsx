@@ -12,7 +12,9 @@ import {
   ShieldCheck,
   CheckCircle2,
   XCircle,
-  PackageCheck
+  PackageCheck,
+  Wrench,
+  RotateCcw
 } from 'lucide-react';
 
 export const ColdRoomGraphic: React.FC = () => {
@@ -28,7 +30,9 @@ export const ColdRoomGraphic: React.FC = () => {
     referenceSensor,
     toggleDoor,
     toggleCooling,
-    setPrimarySensorStatus
+    setPrimarySensorStatus,
+    remediateAndNormalize,
+    isRemediating
   } = useSimulation();
 
   // Dynamic thermal atmosphere color gradient based on actual temp
@@ -281,7 +285,7 @@ export const ColdRoomGraphic: React.FC = () => {
       </div>
 
       {/* Quick interactive action toolbar under graphic */}
-      <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+      <div className="mt-3 grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
         <button
           onClick={toggleDoor}
           className={`p-2 rounded-lg border text-left flex items-center gap-2 font-medium transition-colors ${
@@ -328,8 +332,8 @@ export const ColdRoomGraphic: React.FC = () => {
         >
           <Radio className="w-4 h-4 text-purple-400 shrink-0" />
           <div>
-            <div className="font-semibold text-[11px]">{primarySensor.status === 'spoofed' ? 'Restore Sensor' : 'Spoof Primary (18.5°C)'}</div>
-            <div className="text-[9px] text-slate-400">Trigger divergence alert</div>
+            <div className="font-semibold text-[11px]">{primarySensor.status === 'spoofed' ? 'Restore Sensor' : 'Spoof Primary'}</div>
+            <div className="text-[9px] text-slate-400">Trigger divergence</div>
           </div>
         </button>
 
@@ -349,11 +353,29 @@ export const ColdRoomGraphic: React.FC = () => {
         >
           <Snowflake className="w-4 h-4 text-blue-400 shrink-0" />
           <div>
-            <div className="font-semibold text-[11px]">{primarySensor.status === 'frozen' ? 'Unfreeze Sensor' : 'Freeze Sensor Reading'}</div>
-            <div className="text-[9px] text-slate-400">Lock reading in memory</div>
+            <div className="font-semibold text-[11px]">{primarySensor.status === 'frozen' ? 'Unfreeze Sensor' : 'Freeze Reading'}</div>
+            <div className="text-[9px] text-slate-400">Lock sensor in memory</div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => remediateAndNormalize()}
+          disabled={isRemediating}
+          className={`col-span-2 sm:col-span-1 p-2 rounded-lg border text-left flex items-center gap-2 font-medium transition-all ${
+            isRemediating
+              ? 'bg-cyan-950/60 border-cyan-400 text-cyan-200 glow-cyan animate-pulse'
+              : 'bg-emerald-950/40 text-emerald-300 border-emerald-800/60 hover:bg-emerald-900/40 cursor-pointer'
+          }`}
+          title="Acknowledge and solve active issues, seal door, engage chiller, and normalize temperature back to 4.2°C"
+        >
+          <Wrench className="w-4 h-4 text-emerald-400 shrink-0" />
+          <div>
+            <div className="font-semibold text-[11px]">{isRemediating ? 'Normalizing...' : 'Solve & Normalize'}</div>
+            <div className="text-[9px] text-slate-400">Recover temp to 4.2°C</div>
           </div>
         </button>
       </div>
     </div>
   );
 };
+

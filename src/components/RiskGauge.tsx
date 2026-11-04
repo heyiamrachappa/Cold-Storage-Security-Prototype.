@@ -185,3 +185,4 @@ export const RiskGauge: React.FC = () => {
     </div>
   );
 };
+

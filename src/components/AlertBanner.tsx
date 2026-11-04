@@ -1,9 +1,61 @@
 import React from 'react';
 import { useSimulation } from '../context/SimulationContext';
-import { AlertTriangle, AlertOctagon, X, Check, ShieldAlert, Cpu } from 'lucide-react';
+import { 
+  AlertTriangle, 
+  AlertOctagon, 
+  X, 
+  Check, 
+  ShieldAlert, 
+  Wrench, 
+  RotateCcw,
+  Sparkles,
+  Fan
+} from 'lucide-react';
 
 export const AlertBanner: React.FC = () => {
-  const { activeAlerts, acknowledgeAlert, clearAlerts } = useSimulation();
+  const { 
+    activeAlerts, 
+    acknowledgeAlert, 
+    clearAlerts, 
+    remediateAndNormalize,
+    isRemediating,
+    remediationStatus,
+    actualTemp
+  } = useSimulation();
+
+  // If remediation is active and normalizing, display active remediation progress
+  if (isRemediating && activeAlerts.length === 0) {
+    return (
+      <div className="bg-gradient-to-r from-emerald-950/40 via-cyan-950/40 to-[#080e1b] border-b border-cyan-500/40 text-cyan-100 px-4 py-2.5 shadow-lg glow-cyan">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/40">
+              <Fan className="w-4 h-4 animate-spin" style={{ animationDuration: '1.5s' }} />
+            </div>
+            <div>
+              <span className="font-bold text-white flex items-center gap-1.5 font-mono">
+                <span>[REMEDIATION IN PROGRESS]</span>
+                <span className="text-cyan-300">Chamber Actively Normalizing</span>
+              </span>
+              <p className="text-[11px] text-slate-300">
+                {remediationStatus || 'Root cause resolved. Door sealed and 3.2kW compressor engaged at full pull-down power.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 font-mono text-xs">
+            <div className="px-2.5 py-1 rounded bg-[#0d182b] border border-[#1b2f52] text-slate-300">
+              Current: <strong className="text-amber-300">{actualTemp > 0 ? `+${actualTemp.toFixed(1)}` : actualTemp.toFixed(1)}°C</strong>
+            </div>
+            <span className="text-slate-400">➔</span>
+            <div className="px-2.5 py-1 rounded bg-[#0d182b] border border-[#1b2f52] text-slate-300">
+              Target: <strong className="text-emerald-400">4.2°C (Safe)</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (activeAlerts.length === 0) {
     return null;
@@ -91,28 +143,36 @@ export const AlertBanner: React.FC = () => {
             </div>
           </div>
 
-          {/* Right: Alert Counts & Dismiss Actions */}
-          <div className="flex items-center gap-2 self-end lg:self-center shrink-0">
-            {activeAlerts.length > 1 && (
-              <span className="text-xs text-slate-400 font-mono">
-                +{activeAlerts.length - 1} more alert{activeAlerts.length > 2 ? 's' : ''}
-              </span>
-            )}
+          {/* Right: Actions */}
+          <div className="flex flex-col sm:flex-row items-end lg:items-center gap-2 shrink-0">
+            {/* Primary Action: Acknowledge & Solve Issue */}
             <button
-              onClick={() => acknowledgeAlert(currentAlert.id)}
-              className="px-3 py-1.5 rounded text-xs font-medium bg-[#131f35] hover:bg-[#1a2b49] text-slate-200 border border-[#23385e] flex items-center gap-1 transition-colors"
-              title="Acknowledge this alert"
+              onClick={() => remediateAndNormalize(currentAlert.id)}
+              className="px-3.5 py-2 rounded-lg text-xs font-bold bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+              title="Acknowledge alert, seal door, restore cooling & sensors, and return temperature to 4.2°C"
             >
-              <Check className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Acknowledge</span>
+              <Wrench className="w-3.5 h-3.5" />
+              <span>Acknowledge & Solve Issue (Normalize Temp)</span>
             </button>
-            <button
-              onClick={clearAlerts}
-              className="px-2.5 py-1.5 rounded text-xs font-medium text-slate-400 hover:text-white transition-colors"
-              title="Clear all alerts"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => acknowledgeAlert(currentAlert.id)}
+                className="px-3 py-1.5 rounded text-xs font-medium bg-[#131f35] hover:bg-[#1a2b49] text-slate-200 border border-[#23385e] flex items-center gap-1 transition-colors"
+                title="Acknowledge alert only"
+              >
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Dismiss</span>
+              </button>
+
+              <button
+                onClick={clearAlerts}
+                className="px-2 py-1.5 rounded text-xs font-medium text-slate-400 hover:text-white transition-colors"
+                title="Clear all alerts"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

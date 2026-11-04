@@ -259,3 +259,4 @@ export const ForensicReportView: React.FC = () => {
     </div>
   );
 };
+

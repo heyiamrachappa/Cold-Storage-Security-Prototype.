@@ -533,3 +533,4 @@ export const DigitalEnvironmentView: React.FC = () => {
     </div>
   );
 };
+

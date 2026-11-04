@@ -68,6 +68,10 @@ interface SimulationContextType {
   evidenceRecords: EvidenceRecord[];
   forensicReport: ForensicReport | null;
 
+  // Remediation & Recovery State
+  isRemediating: boolean;
+  remediationStatus: string | null;
+
   // Actions
   setActualTempDirectly: (temp: number) => void;
   adjustActualTemp: (delta: number) => void;
@@ -79,6 +83,7 @@ interface SimulationContextType {
   toggleSimulation: () => void;
   setSimulationSpeed: (speed: number) => void;
   resetEnvironment: () => void;
+  remediateAndNormalize: (alertId?: string) => Promise<void>;
 
   // Sensor Actions
   setPrimarySensorStatus: (status: 'online' | 'frozen' | 'spoofed' | 'disconnected') => void;
@@ -211,6 +216,10 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const [forensicReport, setForensicReport] = useState<ForensicReport | null>(null);
 
+  // Remediation & Recovery State
+  const [isRemediating, setIsRemediating] = useState<boolean>(false);
+  const [remediationStatus, setRemediationStatus] = useState<string | null>(null);
+
   // Helper to append a timeline security event
   const addSecurityEvent = useCallback((
     type: SecurityEvent['type'],
@@ -292,7 +301,8 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           coolingActive,
           doorOpen,
           disturbance,
-          dt: 1
+          dt: 1,
+          targetSetpoint: 4.2
         });
 
         // Small micro ambient noise ±0.02
@@ -307,6 +317,32 @@ export const SimulationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     return () => clearInterval(interval);
   }, [simulationRunning, simulationSpeed, ambientTemp, coolingActive, doorOpen, disturbance]);
+
+  // Monitor active remediation until temperature normalizes to 4.2°C
+  useEffect(() => {
+    if (!isRemediating) return;
+
+    if (actualTemp >= targetMin && actualTemp <= 4.8 && !doorOpen && coolingActive) {
+      setIsRemediating(false);
+      setRemediationStatus(null);
+      addSecurityEvent(
+        'TEMP_CHANGE',
+        'info',
+        'Thermal Equilibrium Restored (4.2°C)',
+        `Chamber has cooled back to nominal ${actualTemp.toFixed(1)}°C. Temperature normalized and safe cold-chain integrity verified.`,
+        'Refrigeration Plant'
+      );
+      createEvidenceRecord(
+        'THERMAL_RECOVERY_COMPLETE',
+        `Chamber normalized at ${actualTemp.toFixed(1)}°C following remediation`,
+        primarySensor.reading,
+        referenceSensor.reading,
+        doorOpen,
+        coolingActive,
+        networkOnline
+      );
+    }
+  }, [isRemediating, actualTemp, targetMin, doorOpen, coolingActive, addSecurityEvent, createEvidenceRecord, primarySensor.reading, referenceSensor.reading, networkOnline]);
 
   // Update sensor readings when actual temperature or sensor config changes
   useEffect(() => {
@@ -1327,6 +1363,81 @@ END OF REPORT — COLDTRACE-AI SECURITY ENGINE
     URL.revokeObjectURL(url);
   }, [forensicReport, evidenceRecords]);
 
+  const remediateAndNormalize = useCallback(async (alertId?: string) => {
+    // 1. Resolve physical conditions
+    setDoorOpen(false);
+    setDoorOpenSeconds(0);
+    setCoolingActive(true);
+    setDisturbance(0);
+
+    // 2. Resolve sensor inconsistencies
+    setPrimarySensor(prev => ({
+      ...prev,
+      status: 'online',
+      bias: 0.1,
+      frozenValue: null
+    }));
+    setReferenceSensor({
+      reading: actualTemp,
+      status: 'online'
+    });
+
+    // 3. Resolve cyber states
+    setNetworkOnline(true);
+    setEsp32SafetyInterlockTriggered(false);
+    setRecentCommands(prev => [
+      {
+        id: `cmd-resolve-${Date.now()}`,
+        command: 'OPERATOR_ENGAGE_RECOVERY',
+        nonce: 'auth-remed-' + Math.random().toString(36).substring(2, 6),
+        timestamp: new Date().toLocaleTimeString(),
+        status: 'ACCEPTED',
+        origin: 'OPERATOR_OVERRIDE',
+        details: 'Operator acknowledged alert and initiated automated system normalization protocol.'
+      },
+      ...prev
+    ]);
+
+    // 4. Resolve any evidence tampering
+    setEvidenceRecords(prev =>
+      prev.map(r => ({
+        ...r,
+        isTampered: false,
+        tamperedPayload: undefined,
+        verificationResult: 'MATCH'
+      }))
+    );
+
+    // 5. Dismiss specific alert or all active alerts
+    if (alertId) {
+      setActiveAlerts(prev => prev.filter(a => a.id !== alertId));
+    } else {
+      setActiveAlerts([]);
+    }
+
+    // 6. Set remediation active
+    setIsRemediating(true);
+    setRemediationStatus('Remediation Engaged: Door sealed, 3.2kW compressor active. Temperature normalizing back to nominal 4.2°C...');
+
+    addSecurityEvent(
+      'DETECTION',
+      'info',
+      'Incident Acknowledged & Solved by Operator',
+      'Root cause resolved: Vault door sealed, cooling engaged, sensors synchronized. Temperature actively returning to normal (4.2°C).',
+      'Operator Console'
+    );
+
+    await createEvidenceRecord(
+      'OPERATOR_REMEDIATION_ENGAGED',
+      'Fault remediated; active thermal normalization engaged',
+      primarySensor.reading,
+      referenceSensor.reading,
+      false,
+      true,
+      true
+    );
+  }, [actualTemp, addSecurityEvent, createEvidenceRecord, primarySensor.reading, referenceSensor.reading]);
+
   const acknowledgeAlert = useCallback((id: string) => {
     setActiveAlerts(prev => prev.filter(a => a.id !== id));
   }, []);
@@ -1363,6 +1474,8 @@ END OF REPORT — COLDTRACE-AI SECURITY ENGINE
         temperatureHistory,
         evidenceRecords,
         forensicReport,
+        isRemediating,
+        remediationStatus,
         setActualTempDirectly,
         adjustActualTemp,
         setTargetRange,
@@ -1373,6 +1486,7 @@ END OF REPORT — COLDTRACE-AI SECURITY ENGINE
         toggleSimulation,
         setSimulationSpeed,
         resetEnvironment,
+        remediateAndNormalize,
         setPrimarySensorStatus,
         setPrimarySensorBias,
         setPrimarySensorSpoofedValue,
@@ -1401,3 +1515,4 @@ export const useSimulation = () => {
   if (!ctx) throw new Error('useSimulation must be used within a SimulationProvider');
   return ctx;
 };
+
