@@ -112,3 +112,4 @@ Emphasizes critical safety boundary separation:
 - **Vite**
 - **Web Crypto API** (Browser-native SHA-256 hashing)
 
+# Cold-Storage-Security-Prototype.
